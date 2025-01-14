@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.6
+    container_name: keycloak
+    command: start
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HTTP_PORT: 5010
+      KC_HTTPS_PORT: 5011
+      KC_HTTP_MANAGEMENT_PORT: 5012
+      KC_HOSTNAME_STRICT_BACKCHANNEL: false
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres-auth/auth_service
+      KC_DB_USERNAME: auth_user
+      KC_DB_PASSWORD: auth_pass
+    ports:
+      - 5010:5010
+      - 5011:5011
+      - 5012:5012
+    restart: always
+    depends_on:
+      - postgres-auth
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+    networks:
+      - keycloak-network
+      - service-network
+
+  postgres-auth:
+    image: postgres:latest
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_service
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - keycloak-network
+
+  auth-service:
+    build:
+      context: ./Authentication/
+      dockerfile: Dockerfile
+    container_name: auth-service
+    env_file:
+      - ./Authentication/.env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - keycloak
+    networks:
+      - service-network
+
+  postgres-discord:
+    image: postgres:latest
+    container_name: discord-db
+    environment:
+      POSTGRES_DB: discord_service
+      POSTGRES_USER: discord_user
+      POSTGRES_PASSWORD: discord_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-discord-data:/var/lib/postgresql/data
+    networks:
+      - service-network
+
+volumes:
+  postgres-auth-data:
+  postgres-discord-data:
+  keycloak-data:
+
+networks:
+  service-network:
+    driver: bridge
+  keycloak-network:
+    driver: bridge
+
