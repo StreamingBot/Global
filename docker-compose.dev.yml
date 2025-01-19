@@ -47,7 +47,9 @@ services:
     restart: "no"
 
   auth-service:
-    image: popodil/streamerbot-authentication:dev
+    build:
+      context: ./Authentication/
+      dockerfile: Dockerfile
     container_name: auth-service
     env_file:
       - ./Authentication/.env
@@ -76,7 +78,9 @@ services:
     restart: "no"
 
   discord-service:
-    image: popodil/streamerbot-discord:dev
+    build:
+      context: ./Discord/
+      dockerfile: Dockerfile
     container_name: discord-service
     env_file:
       - ./Discord/.env
@@ -90,7 +94,9 @@ services:
     restart: "no"
 
   user-service:
-    image: popodil/streamerbot-user:dev
+    build:
+      context: ./User/
+      dockerfile: Dockerfile
     container_name: user-service
     env_file:
       - ./User/.env
@@ -102,7 +108,9 @@ services:
     restart: "no"
 
   gateway:
-    image: popodil/streamerbot-gateway:dev
+    build:
+      context: ./Gateway/
+      dockerfile: Dockerfile
     container_name: gateway
     env_file:
       - ./Gateway/.env
@@ -114,7 +122,6 @@ services:
       - auth-service
     networks:
       - service-network
-      - keycloak-network
     restart: "no"
 
   # prometheus:
