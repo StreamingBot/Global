@@ -17,23 +17,23 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: password
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-auth/auth_service
+      KC_DB_URL: jdbc:postgresql://auth-db/auth_service
       KC_DB_USERNAME: auth_user
       KC_DB_PASSWORD: auth_pass
     ports:
       - 5010:5010
       - 5011:5011
       - 5012:5012
-    restart: always
     depends_on:
-      - postgres-auth
+      - auth-db
     volumes:
       - keycloak-data:/opt/keycloak/data
     networks:
       - keycloak-network
-      - service-network
+      - auth-network
+    restart: "no"
 
-  postgres-auth:
+  auth-db:
     image: postgres:latest
     container_name: auth-db
     environment:
@@ -46,6 +46,7 @@ services:
       - postgres-auth-data:/var/lib/postgresql/data
     networks:
       - keycloak-network
+    restart: "no"
 
   auth-service:
     build:
@@ -59,9 +60,11 @@ services:
     depends_on:
       - keycloak
     networks:
+      - auth-network
       - service-network
+    restart: "no"
 
-  postgres-discord:
+  discord-db:
     image: postgres:latest
     container_name: discord-db
     environment:
@@ -73,16 +76,115 @@ services:
     volumes:
       - postgres-discord-data:/var/lib/postgresql/data
     networks:
+      - discord-network
+    restart: "no"
+
+  discord-service:
+    build:
+      context: ./Discord/
+      dockerfile: Dockerfile
+    container_name: discord-service
+    env_file:
+      - ./Discord/.env
+    ports:
+      - "5002:5002"
+    depends_on:
+      - discord-db
+    networks:
       - service-network
+      - discord-network
+    restart: "no"
+
+  user-service:
+    build:
+      context: ./User/
+      dockerfile: Dockerfile
+    container_name: user-service
+    env_file:
+      - ./User/.env
+    ports:
+      - "5003:5003"
+    networks:
+      - service-network
+      - user-network
+    restart: "no"
+
+  gateway:
+    build:
+      context: ./Gateway/
+      dockerfile: Dockerfile
+    container_name: gateway
+    env_file:
+      - ./Gateway/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - user-service
+      # - discord-service
+      - auth-service
+    networks:
+      - service-network
+    restart: "no"
+
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus:/etc/prometheus
+  #     - prometheus-data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus'
+  #     - '--web.console.libraries=/etc/prometheus/console_libraries'
+  #     - '--web.console.templates=/etc/prometheus/consoles'
+  #     - '--web.enable-lifecycle'
+  #   depends_on:
+  #     - user-service
+  #     - discord-service
+  #     - auth-service
+  #   networks:
+  #     - monitoring-network
+  #     - service-network
+  #   restart: "no"
+
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: grafana
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_USER=admin
+  #     - GF_SECURITY_ADMIN_PASSWORD=grafana
+  #     - GF_USERS_ALLOW_SIGN_UP=false
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   networks:
+  #     - monitoring-network
+  #   depends_on:
+  #     - prometheus
+  #   restart: "no"
 
 volumes:
   postgres-auth-data:
   postgres-discord-data:
   keycloak-data:
+  mongodb-user-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   service-network:
     driver: bridge
+  auth-network:
+    driver: bridge
   keycloak-network:
     driver: bridge
-
+  discord-network:
+    driver: bridge
+  user-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+  
