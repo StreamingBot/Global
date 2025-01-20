@@ -107,6 +107,17 @@ services:
       - user-network
     restart: "no"
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - service-network
+    restart: "no"
+
   gateway:
     build:
       context: ./Gateway/
@@ -120,8 +131,10 @@ services:
       - user-service
       # - discord-service
       - auth-service
+      - redis
     networks:
       - service-network
+      - keycloak-network
     restart: "no"
 
   # prometheus:
@@ -171,6 +184,7 @@ volumes:
   mongodb-user-data:
   prometheus-data:
   grafana-data:
+  redis-data:
 
 networks:
   service-network:
