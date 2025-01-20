@@ -27,13 +27,30 @@ spec:
           value: "true"
         - name: KC_HOSTNAME_STRICT_HTTPS
           value: "false"
+        - name: KC_PROXY
+          value: "edge"
         - name: KEYCLOAK_ADMIN
           value: "admin"
         - name: KEYCLOAK_ADMIN_PASSWORD
           value: "password"
+        - name: KC_DB
+          value: "postgres"
+        - name: KC_DB_URL
+          value: "jdbc:postgresql://auth-db/auth_service"
+        - name: KC_DB_USERNAME
+          value: "auth_user"
+        - name: KC_DB_PASSWORD
+          value: "auth_pass"
         ports:
         - containerPort: 5010
         - containerPort: 5011
+        volumeMounts:
+        - name: keycloak-data
+          mountPath: /opt/keycloak/data
+      volumes:
+      - name: keycloak-data
+        persistentVolumeClaim:
+          claimName: keycloak-data-pvc
 ---
 apiVersion: v1
 kind: Service

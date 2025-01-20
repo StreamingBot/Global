@@ -21,4 +21,11 @@ spec:
         - configMapRef:
             name: auth-service-config
         - secretRef:
-            name: auth-service-secrets 
+            name: auth-service-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m" 
