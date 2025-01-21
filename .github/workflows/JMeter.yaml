@@ -25,6 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout Global Repository
+        uses: actions/checkout@v4
+        with:
+          repository: StreamingBot/Global
+          path: Global
+
       - name: Checkout Gateway
         uses: actions/checkout@v4
         with:
@@ -68,7 +74,7 @@ jobs:
           fi
           
           apache-jmeter-5.6.3/bin/jmeter -n \
-            -t "JMeter/$TEST_PLAN" \
+            -t "Global/JMeter/$TEST_PLAN" \
             -l results.jtl \
             -e -o report \
             -JnumberOfThreads=${{ github.event.inputs.numberOfThreads }} \
