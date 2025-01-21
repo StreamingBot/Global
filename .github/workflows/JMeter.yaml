@@ -1,0 +1,84 @@
+name: JMeter Load Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      numberOfThreads:
+        description: 'Number of concurrent users'
+        required: true
+        default: '120'
+      authToken:
+        description: 'Authentication token'
+        required: true
+      testPlan:
+        description: 'Test plan to run (servers/login)'
+        required: true
+        default: 'login'
+        type: choice
+        options:
+          - servers
+          - login
+
+jobs:
+  load-test:
+    name: Run JMeter Load Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Gateway
+        uses: actions/checkout@v4
+        with:
+          repository: StreamingBot/Gateway
+          path: Gateway
+
+      - name: Checkout Authentication
+        uses: actions/checkout@v4
+        with:
+          repository: StreamingBot/Authentication
+          path: Authentication
+
+      - name: Checkout Discord
+        uses: actions/checkout@v4
+        with:
+          repository: StreamingBot/Discord
+          path: Discord
+
+      - name: Checkout User
+        uses: actions/checkout@v4
+        with:
+          repository: StreamingBot/User
+          path: User
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Download JMeter
+        run: |
+          wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+
+      - name: Run JMeter Test
+        run: |
+          TEST_PLAN="StreamingBot Test Plan.jmx"
+          if [ "${{ github.event.inputs.testPlan }}" = "login" ]; then
+            TEST_PLAN="Login Test Plan.jmx"
+          fi
+          
+          apache-jmeter-5.6.3/bin/jmeter -n \
+            -t "JMeter/$TEST_PLAN" \
+            -l results.jtl \
+            -e -o report \
+            -JnumberOfThreads=${{ github.event.inputs.numberOfThreads }} \
+            -JauthToken=${{ github.event.inputs.authToken }}
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-results
+          path: |
+            results.jtl
+            report/

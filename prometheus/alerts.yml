@@ -1,0 +1,83 @@
+groups:
+  - name: API Alerts
+    rules:
+      - alert: High API Response Time
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[1m])) > 0.2
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hoge API-responstijd gedetecteerd"
+          description: "95% van de API-aanvragen duren langer dan 200 ms."
+
+      - alert: High Error Rate
+        expr: sum(rate(http_server_requests_seconds_count{status="5xx"}[1m])) > 10
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hoge foutpercentages gedetecteerd"
+          description: "Meer dan 10 foutieve API-aanvragen in de afgelopen minuut."
+
+      - alert: Specific Error Rate 429
+        expr: sum(rate(http_server_requests_seconds_count{status="429"}[1m])) > 200
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hoge foutpercentages 429 gedetecteerd"
+          description: "Meer dan 200 aanvragen resulteren in een 429-fout in de afgelopen minuut. Mogelijk een DoS-aanval."
+
+      - alert: High CPU Usage
+        expr: process_cpu_usage > 0.8
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hoge CPU-belasting"
+          description: "Server CPU-gebruik is boven 80%."
+
+      - alert: High Memory Usage
+        expr: sum(jvm_memory_used_bytes) / sum(jvm_memory_max_bytes) > 0.75
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hoge geheugengebruik"
+          description: "Server geheugengebruik is boven 75%."
+
+      - alert: High Request Rate
+        expr: sum(rate(http_server_requests_seconds_count[30s])) > 150
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Hoge Request Rate Gedetecteerd"
+          description: "Meer dan 150 verzoeken zijn ontvangen in de laatste 10 seconden. Mogelijke DoS-aanval."
+
+      - alert: Application Restart Detected
+        expr: process_uptime_seconds < 600
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Applicatie herstart gedetecteerd"
+          description: "De applicatie is minder dan 10 minuten geleden herstart."
+
+      - alert: Low Service Uptime
+        expr: (avg_over_time(up[24h]) * 100) < 98
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service uptime onder 98%"
+          description: "De service heeft een uptime van minder dan 98% over de laatste 24 uur."
+
+      - alert: Critical Low Service Uptime
+        expr: (avg_over_time(up[24h]) * 100) < 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service uptime kritisch laag"
+          description: "De service heeft een uptime van minder dan 90% over de laatste 24 uur."
