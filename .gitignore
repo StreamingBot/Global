@@ -2,5 +2,10 @@ Authentication
 Discord
 Gateway
 User
+html-report
 
 .idea/*
+jmeter.log
+detailed-report.html
+detailed_results.jtl
+test-results.jtl

@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'keycloak'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['keycloak:5010']
+
+  - job_name: 'auth-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['auth-service:5001']
+
+  - job_name: 'discord-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['discord-service:5002']
+
+  - job_name: 'user-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['user-service:5003']
+
+rule_files:
+  - "alerts.yml" 

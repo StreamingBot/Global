@@ -1,0 +1,194 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.6
+    container_name: keycloak
+    command: start
+    environment:
+      KC_HOSTNAME: localhost
+      KC_HTTP_PORT: 5010
+      KC_HTTPS_PORT: 5011
+      KC_HTTP_MANAGEMENT_PORT: 5012
+      KC_HOSTNAME_STRICT_BACKCHANNEL: false
+      KC_HTTP_ENABLED: true
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: password
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://auth-db/auth_service
+      KC_DB_USERNAME: auth_user
+      KC_DB_PASSWORD: auth_pass
+    ports:
+      - 5010:5010
+      - 5011:5011
+      - 5012:5012
+    depends_on:
+      - auth-db
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+    networks:
+      - keycloak-network
+      - auth-network
+    restart: "no"
+
+  auth-db:
+    image: postgres:latest
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_service
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - keycloak-network
+    restart: "no"
+
+  auth-service:
+    image: popodil/streamerbot-authentication:dev
+    container_name: auth-service
+    env_file:
+      - ./Authentication/.env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - keycloak
+    networks:
+      - auth-network
+      - service-network
+    restart: "no"
+
+  discord-db:
+    image: postgres:latest
+    container_name: discord-db
+    environment:
+      POSTGRES_DB: discord_service
+      POSTGRES_USER: discord_user
+      POSTGRES_PASSWORD: discord_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-discord-data:/var/lib/postgresql/data
+    networks:
+      - discord-network
+    restart: "no"
+
+  discord-service:
+    image: popodil/streamerbot-discord:dev
+    container_name: discord-service
+    env_file:
+      - ./Discord/.env
+    ports:
+      - "5002:5002"
+    depends_on:
+      - discord-db
+    networks:
+      - service-network
+      - discord-network
+    restart: "no"
+
+  user-service:
+    image: popodil/streamerbot-user:dev
+    container_name: user-service
+    env_file:
+      - ./User/.env
+    ports:
+      - "5003:5003"
+    networks:
+      - service-network
+      - user-network
+    restart: "no"
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - service-network
+    restart: "no"
+
+  gateway:
+    image: popodil/streamerbot-gateway:dev
+    container_name: gateway
+    env_file:
+      - ./Gateway/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - user-service
+      # - discord-service
+      - auth-service
+      - redis
+    networks:
+      - service-network
+      - keycloak-network
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - user-service
+      - discord-service
+      - auth-service
+    networks:
+      - monitoring-network
+      - service-network
+    restart: "no"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring-network
+    depends_on:
+      - prometheus
+    restart: "no"
+
+volumes:
+  postgres-auth-data:
+  postgres-discord-data:
+  keycloak-data:
+  mongodb-user-data:
+  prometheus-data:
+  grafana-data:
+  redis-data:
+
+networks:
+  service-network:
+    driver: bridge
+  auth-network:
+    driver: bridge
+  keycloak-network:
+    driver: bridge
+  discord-network:
+    driver: bridge
+  user-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+  
